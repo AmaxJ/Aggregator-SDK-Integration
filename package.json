@@ -1,0 +1,141 @@
+{
+  "name": "perp-aggregator-sdk",
+  "scripts": {
+    "fmt": "prettier --write src test",
+    "lint": "eslint --cache .",
+    "lint:fix": "eslint --fix --cache .",
+    "build": "pnpm i && pnpm tsc"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    "./fixedNumber": {
+      "import": "./fixedNumber/index.js",
+      "types": "./fixedNumber/index.d.ts"
+    },
+    "./pyth-config": {
+      "import": "./pyth/index.js",
+      "types": "./pyth/index.d.ts"
+    },
+    "./router": {
+      "import": "./router/index.js",
+      "types": "./router/index.d.ts"
+    },
+    "./interfaces": {
+      "import": "./src/interfaces/index.js",
+      "types": "./src/interfaces/index.d.ts"
+    },
+    "./aevo-config": {
+      "import": "./src/configs/aevo/index.js",
+      "types": "./src/configs/aevo/index.d.ts"
+    },
+    "./hyperliquid-config": {
+      "import": "./src/configs/hyperliquid/index.js",
+      "types": "./src/configs/hyperliquid/index.d.ts"
+    },
+    "./provider": {
+      "import": "./src/common/provider/index.js",
+      "types": "./src/common/provider/index.d.ts"
+    },
+    "./markets": {
+      "import": "./src/common/markets/index.js",
+      "types": "./src/common/markets/index.d.ts"
+    },
+    "./errors": {
+      "import": "./src/common/errors/index.js",
+      "types": "./src/common/errors/index.d.ts"
+    },
+    "./buttonHeadings": {
+      "import": "./src/common/buttonHeadings/index.js",
+      "types": "./src/common/buttonHeadings/index.d.ts"
+    },
+    "./cache": {
+      "import": "./src/common/cache/index.js",
+      "types": "./src/common/cache/index.d.ts"
+    },
+    "./constants": {
+      "import": "./src/common/constants/index.js",
+      "types": "./src/common/constants/index.d.ts"
+    },
+    "./protocols": {
+      "import": "./src/common/protocols/index.js",
+      "types": "./src/common/protocols/index.d.ts"
+    },
+    "./types": {
+      "import": "./src/common/types/index.js",
+      "types": "./src/common/types/index.d.ts"
+    },
+    "./tokens": {
+      "import": "./src/common/tokens/index.js",
+      "types": "./src/common/tokens/index.d.ts"
+    },
+    "./helper": {
+      "import": "./src/common/helper/index.js",
+      "types": "./src/common/helper/index.d.ts"
+    },
+    "./aevo": {
+      "import": "./src/exchanges/aevo/index.js",
+      "types": "./src/exchanges/aevo/index.d.ts"
+    },
+    "./gmxv2": {
+      "import": "./src/exchanges/gmxv2/index.js",
+      "types": "./src/exchanges/gmxv2/index.d.ts"
+    },
+    "./hyperliquid": {
+      "import": "./src/exchanges/hyperliquid/index.js",
+      "types": "./src/exchanges/hyperliquid/index.d.ts"
+    }
+  },
+  "files": [
+    "generated/**/*",
+    "router/**/*",
+    "src/**/*",
+    "typechain/**/*"
+  ],
+  "dependencies": {
+    "@apollo/client": "3.10.2",
+    "@dydxprotocol/v4-client-js": "1.1.7",
+    "@ethersproject/abi": "^5.7.0",
+    "@ethersproject/bytes": "^5.7.0",
+    "@ethersproject/providers": "^5.7.2",
+    "@msgpack/msgpack": "3.0.0-beta2",
+    "@perennial/sdk": "0.0.1-beta29",
+    "@pythnetwork/client": "^2.21.0",
+    "@pythnetwork/price-service-client": "^1.9.0",
+    "@synfutures/oyster-sdk": "0.1.11",
+    "@synthetixio/wei": "^2.74.4",
+    "@tanstack/react-query": "^5.34.2",
+    "ethers": "^5.7.2",
+    "ethers-v6": "npm:ethers@6.8.0",
+    "isomorphic-ws": "^5.0.0",
+    "long": "^5.2.3",
+    "ts-retry-promise": "^0.8.0",
+    "viem": "2.9.31",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.8",
+    "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "dotenv": "^16.4.5",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^3.6.1",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-prettier": "^5.1.3",
+    "eslint-plugin-simple-import-sort": "12.1.0",
+    "eslint-plugin-unused-imports": "^3.2.0",
+    "execution-time-decorators": "^2.0.3",
+    "lodash": "^4.17.21",
+    "prettier": "^3.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "version": "1.0.0",
+  "license": "MIT",
+  "pnpm": {
+    "overrides": {
+      "axios": "^1.6.8"
+    }
+  }
+}

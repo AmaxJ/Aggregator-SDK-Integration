@@ -1,0 +1,246 @@
+import { NATIVE_TOKEN_ADDRESS } from '@synfutures/oyster-sdk'
+import { arbitrum, blast, optimism } from 'viem/chains'
+
+export type Maybe<T> = T | undefined
+
+export interface Token {
+  symbol: string
+  name: string
+  decimals: number
+  address: {
+    [arbitrum.id]: Maybe<`0x${string}`>
+    [optimism.id]: Maybe<`0x${string}`>
+    [blast.id]: Maybe<`0x${string}`>
+  }
+}
+
+export type SupportedChains = keyof Token['address']
+
+export const tokens = {
+  ETH: {
+    symbol: 'ETH',
+    name: 'Ethereum',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0x0000000000000000000000000000000000000000',
+      [optimism.id]: '0x0000000000000000000000000000000000000000',
+      [blast.id]: NATIVE_TOKEN_ADDRESS
+    }
+  },
+  'USDC.e': {
+    symbol: 'USDC.e',
+    name: ' Bridged USDC',
+    decimals: 6,
+    address: {
+      [arbitrum.id]: '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8',
+      [optimism.id]: '0x7F5c764cBc14f9669B88837ca1490cCa17c31607',
+      [blast.id]: undefined
+    }
+  },
+  USDC: {
+    symbol: 'USDC',
+    name: 'USD Coin',
+    decimals: 6,
+    address: {
+      [arbitrum.id]: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+      [optimism.id]: '0x0b2c639c533813f4aa9d7837caf62653d097ff85',
+      [blast.id]: undefined
+    }
+  },
+  WETH: {
+    symbol: 'WETH',
+    name: 'Wrapped ETH',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+      [optimism.id]: '0x4200000000000000000000000000000000000006',
+      [blast.id]: '0x4300000000000000000000000000000000000004'
+    }
+  },
+  sUSD: {
+    symbol: 'sUSD',
+    name: 'Synth sUSD',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0xA970AF1a584579B618be4d69aD6F73459D112F95',
+      [optimism.id]: '0x8c6f28f2F1A3C87F0f938b96d27520d9751ec8d9',
+      [blast.id]: undefined
+    }
+  },
+  BTC: {
+    symbol: 'BTC',
+    name: 'Wrapped BTC',
+    decimals: 8,
+    address: {
+      [arbitrum.id]: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f',
+      [optimism.id]: '0x68f180fcCe6836688e9084f035309E29Bf0A2095',
+      [blast.id]: undefined
+    }
+  },
+  LINK: {
+    symbol: 'LINK',
+    name: 'Chainlink',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0xf97f4df75117a78c1A5a0DBb814Af92458539FB4',
+      [optimism.id]: '0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6',
+      [blast.id]: undefined
+    }
+  },
+  UNI: {
+    symbol: 'UNI',
+    name: 'Uniswap',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0',
+      [optimism.id]: '0x6fd9d7AD17242c41f7131d257212c54A0e816691',
+      [blast.id]: undefined
+    }
+  },
+  USDT: {
+    symbol: 'USDT',
+    name: 'Tether',
+    decimals: 6,
+    address: {
+      [arbitrum.id]: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+      [optimism.id]: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58',
+      [blast.id]: undefined
+    }
+  },
+  DAI: {
+    symbol: 'DAI',
+    name: 'Dai',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1',
+      [optimism.id]: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1',
+      [blast.id]: undefined
+    }
+  },
+  ARB: {
+    symbol: 'ARB',
+    name: 'Arbitrum',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0x912CE59144191C1204E64559FE8253a0e49E6548',
+      [optimism.id]: undefined,
+      [blast.id]: undefined
+    }
+  },
+  FRAX: {
+    symbol: 'FRAX',
+    name: 'FRAX',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F',
+      [optimism.id]: '0x2E3D870790dC77A83DD1d18184Acc7439A53f475',
+      [blast.id]: undefined
+    }
+  },
+  SOL: {
+    symbol: 'SOL',
+    name: 'Solana',
+    decimals: 9,
+    address: {
+      [arbitrum.id]: '0x2bcC6D6CdBbDC0a4071e48bb3B969b06B3330c07',
+      [optimism.id]: '0xba1Cf949c382A32a09A17B2AdF3587fc7fA664f1',
+      [blast.id]: undefined
+    }
+  },
+  AVAX: {
+    name: 'Wrapped AVAX (Wormhole)',
+    symbol: 'AVAX',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0x565609fAF65B92F7be02468acF86f8979423e514',
+      [optimism.id]: '0x565609fAF65B92F7be02468acF86f8979423e514',
+      [blast.id]: undefined
+    }
+  },
+  OP: {
+    name: 'Optimism',
+    symbol: 'OP',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0xaC800FD6159c2a2CB8fC31EF74621eB430287a5A',
+      [optimism.id]: undefined,
+      [blast.id]: undefined
+    }
+  },
+  GMX: {
+    name: 'GMX',
+    symbol: 'GMX',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a',
+      [optimism.id]: undefined,
+      [blast.id]: undefined
+    }
+  },
+  USDB: {
+    symbol: 'USDB',
+    name: 'USDB',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: undefined,
+      [optimism.id]: undefined,
+      [blast.id]: '0x4300000000000000000000000000000000000003'
+    }
+  },
+  fwWETH: {
+    symbol: 'fwWETH',
+    name: 'Few Wrapped Wrapped Ether',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: undefined,
+      [optimism.id]: undefined,
+      [blast.id]: '0x66714db8f3397c767d0a602458b5b4e3c0fe7dd1'
+    }
+  },
+  PAC: {
+    symbol: 'PAC',
+    name: 'PacMoon',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: undefined,
+      [optimism.id]: undefined,
+      [blast.id]: '0x5ffd9ebd27f2fcab044c0f0a26a45cb62fa29c06'
+    }
+  },
+  ezETH: {
+    symbol: 'ezETH',
+    name: 'Renzo Restaked ETH',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: undefined,
+      [optimism.id]: undefined,
+      [blast.id]: '0x2416092f143378750bb29b79eD961ab195CcEea5'
+    }
+  },
+  weETH: {
+    symbol: 'weETH',
+    name: 'Wrapped eETH',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: undefined,
+      [optimism.id]: undefined,
+      [blast.id]: '0x04C0599Ae5A44757c0af6F9eC3b93da8976c150A'
+    }
+  }
+} as const satisfies Record<string, Token>
+
+export type TokenSymbol = keyof typeof tokens
+
+export const ListedTokens = Object.values(tokens)
+
+export function getTokenBySymbol(symbol: TokenSymbol) {
+  return tokens[symbol] as Token
+}
+
+export function getTokenByAddress(address: string) {
+  return Object.values(tokens).find(
+    (t) =>
+      t.address[arbitrum.id]?.toLowerCase() === address.toLowerCase() ||
+      t.address[optimism.id]?.toLowerCase() === address.toLowerCase()
+  ) as Token
+}
