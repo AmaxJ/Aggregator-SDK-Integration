@@ -5,8 +5,10 @@ import { arbitrum } from 'viem/chains'
 
 import { divFN, FixedNumber } from '../../fixedNumber'
 import { ReferralStorage__factory } from '../../typechain/gmx-v1'
-import type { Reader } from '../../typechain/gmx-v2'
-import { ExchangeRouter__factory, IERC20__factory, Reader__factory } from '../../typechain/gmx-v2'
+import type { Reader } from '../../typechain/gmx-v2/typechain/contracts/reader/Reader'
+import { IERC20__factory } from '../../typechain/gmx-v2/typechain/factories/@openzeppelin/contracts/token/ERC20/IERC20__factory'
+import { Reader__factory } from '../../typechain/gmx-v2/typechain/factories/contracts/reader/Reader__factory'
+import { ExchangeRouter__factory } from '../../typechain/gmx-v2/typechain/factories/contracts/router/ExchangeRouter__factory'
 import {
   CANCEL_ORDER_H,
   EMPTY_DESC,
@@ -168,7 +170,7 @@ export class GmxV2Service implements IAdapterV1 {
 
   private READER_ADDR = '0xf60becbba223EEA9495Da3f606753867eC10d139'
   private DATASTORE_ADDR = '0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8'
-  private EXCHANGE_ROUTER = '0x7C68C7866A64FA2160F78EEaE12217FFbf871fa8'
+  private EXCHANGE_ROUTER = '0x69C527fC77291722b52649E45c838e41be8Bf5d5'
 
   private ROUTER_ADDR = '0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6'
   private ORDER_VAULT_ADDR = '0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5'
@@ -308,6 +310,7 @@ export class GmxV2Service implements IAdapterV1 {
               UPDATE: true,
               CANCEL: true
             },
+            isQuoteTokenUSD: true,
             marketSymbol: this._getMarketSymbol(getGmxV2TokenByAddress(mProp.indexToken))
           }
 
@@ -555,6 +558,7 @@ export class GmxV2Service implements IAdapterV1 {
           callbackContract: ethers.constants.AddressZero,
           uiFeeReceiver: ethers.constants.AddressZero,
           market: mkt.market.marketToken,
+          cancellationReceiver: ethers.constants.AddressZero,
           initialCollateralToken:
             od.collateral.symbol === 'ETH' ? tokens.WETH.address[42161]! : od.collateral.address[42161]!,
           swapPath: []
@@ -568,6 +572,7 @@ export class GmxV2Service implements IAdapterV1 {
           callbackGasLimit: ethers.constants.Zero,
           minOutputAmount: ethers.constants.Zero
         },
+        autoCancel: false,
         orderType: this._mapOrderType(od.type, od.direction),
         decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
         isLong: od.direction == 'LONG',
@@ -683,7 +688,8 @@ export class GmxV2Service implements IAdapterV1 {
         od.sizeDelta.amount.toFormat(30).value,
         acceptablePrice,
         triggerPrice,
-        ethers.constants.Zero
+        ethers.constants.Zero,
+        false
       )
 
       // encode as multicall
@@ -827,6 +833,7 @@ export class GmxV2Service implements IAdapterV1 {
           receiver: wallet,
           callbackContract: ethers.constants.AddressZero,
           uiFeeReceiver: ethers.constants.AddressZero,
+          cancellationReceiver: ethers.constants.AddressZero,
           market: positionInfo[i].marketId.split('-')[2],
           initialCollateralToken: positionInfo[i].collateral.address[42161]!,
           swapPath: []
@@ -840,6 +847,7 @@ export class GmxV2Service implements IAdapterV1 {
           callbackGasLimit: ethers.constants.Zero,
           minOutputAmount: ethers.constants.Zero
         },
+        autoCancel: false,
         orderType: orderType,
         decreasePositionSwapType: DecreasePositionSwapType.SwapPnlTokenToCollateralToken,
         isLong: positionInfo[i].direction == 'LONG',
@@ -945,6 +953,7 @@ export class GmxV2Service implements IAdapterV1 {
         addresses: {
           receiver: wallet,
           callbackContract: ethers.constants.AddressZero,
+          cancellationReceiver: ethers.constants.AddressZero,
           uiFeeReceiver: ethers.constants.AddressZero,
           market: positionInfo[i].marketId.split('-')[2],
           initialCollateralToken: initialCollateralToken,
@@ -959,6 +968,7 @@ export class GmxV2Service implements IAdapterV1 {
           callbackGasLimit: ethers.constants.Zero,
           minOutputAmount: ethers.constants.Zero
         },
+        autoCancel: false,
         orderType: orderType,
         decreasePositionSwapType: DecreasePositionSwapType.NoSwap,
         isLong: positionInfo[i].direction == 'LONG',

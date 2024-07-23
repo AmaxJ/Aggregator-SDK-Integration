@@ -621,6 +621,7 @@ export class AevoAdapterV1 implements IAdapterV1 {
             CANCEL: true
           },
           marketSymbol: m.underlying_asset,
+          isQuoteTokenUSD: true,
           metadata: m
         }
 

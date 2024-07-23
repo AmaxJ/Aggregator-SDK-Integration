@@ -4,7 +4,7 @@ import type { Chain } from 'viem'
 import { arbitrum } from 'viem/chains'
 
 import { abs, addFN, divFN, FixedNumber, mulFN, subFN } from '../../fixedNumber'
-import { IERC20__factory } from '../../typechain/gmx-v2'
+import { IERC20__factory } from '../../typechain/gmx-v2/typechain/factories/@openzeppelin/contracts/token/ERC20/IERC20__factory'
 import { EMPTY_DESC, HYPERLIQUID_DEPOSIT_H } from '../common/buttonHeadings'
 import {
   CACHE_DAY,
@@ -238,7 +238,8 @@ export class HyperliquidAdapterV1 implements IAdapterV1 {
               UPDATE: true,
               CANCEL: true
             },
-            marketSymbol: u.name
+            marketSymbol: u.name,
+            isQuoteTokenUSD: true
           }
 
           const staticMetadata: GenericStaticMarketMetadata = {

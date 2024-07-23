@@ -186,6 +186,7 @@ export type Market = {
   supportedOrderTypes: Record<OrderType, boolean>
   supportedOrderActions: Record<OrderAction, boolean>
   marketSymbol: string
+  isQuoteTokenUSD: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: any
 }
@@ -658,6 +659,12 @@ export type AccountInfoData<T extends ProtocolId> = T extends 'GMXV1' | 'GMXV2' 
                 accountEquity: FixedNumber // The equity of the account.
                 unrealizedPnl: FixedNumber // The aggregate unrealized PNL.
                 availableToTrade: FixedNumber // The amount available for trading.
+                balances: {
+                  asset: string
+                  total: FixedNumber
+                  locked: FixedNumber
+                  withdrawable: FixedNumber
+                }[]
               }
             : never
 

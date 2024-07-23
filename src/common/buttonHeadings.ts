@@ -120,3 +120,9 @@ export const DYDX_UPDATE_ORDER_H = 'Update Order'
 // SYNFUTURES
 export const SYNFUTURES_DEPOSIT = 'SynFutures: Deposit'
 export const SYNFUTURES_WITHDRAW = 'SynFutures: Withdraw'
+
+// PERENNIAL
+export const PERENNIAL_DEPOSIT = 'Perennial: Deposit'
+export const PERENNIAL_WITHDRAW = 'Perennial: Withdraw'
+export const PERENNIAL_UPDATE_MARGIN = 'Update Margin'
+export const PERENNIAL_APPROVE_MARKET = 'Enable Perennial: Approve Market'
