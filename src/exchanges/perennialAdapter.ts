@@ -1255,7 +1255,7 @@ export class PerennialAdapter implements IAdapterV1 {
         keeperFeesPaid: FixedNumber.fromValue(position.feeAccumulations.settlement, 6),
         positionFee: FixedNumber.fromValue(position.feeAccumulations.trade, 6),
         operationType: position.side === PositionSide.long ? 'Long' : 'Short', // TODO: this is a little loose..
-        txHash: '', // TODO: add tx hash to historical positions
+        txHash: position.startTransactionHash || '',
         collateral: tokens['USDC'],
         marketId: encodePerennialMarketId(position.market),
         direction: (position.side === PositionSide.long ? 'LONG' : 'SHORT') as TradeDirection,
