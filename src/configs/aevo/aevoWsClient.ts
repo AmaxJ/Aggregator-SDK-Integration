@@ -3,6 +3,7 @@ import { clearInterval } from 'timers'
 
 import { AevoClient } from '../../../generated/aevo'
 import { CACHE_DAY } from '../../common/cache'
+import type { SubscribeCandleArgs } from '../../interfaces'
 import { aevoCacheGetAllMarkets } from './aevoCacheHelper'
 import { aevoMarketIdToAsset } from './helper'
 
@@ -102,6 +103,18 @@ function processRes(res: any) {
   if (res['channel'] && res['channel'].includes('orderbook')) {
     processOBResponse(res)
   }
+  if (res['channel'] && res['channel'].includes('index')) {
+    const candle = res.data as AevoCandleRes['data']
+    if (aevoRealtimeCallback)
+      aevoRealtimeCallback({
+        close: Number(candle.price),
+        high: Number(candle.price),
+        low: Number(candle.price),
+        open: Number(candle.price),
+        time: Number(candle.timestamp) / 1e6,
+        volume: 0
+      })
+  }
 }
 
 function getPingMsg() {
@@ -132,7 +145,7 @@ export function getAevoWssOrderBook(asset: string): AevoWssOrderBook | undefined
 function getSubOBMsg(asset: string, precision: number | undefined): string {
   return JSON.stringify({
     op: 'subscribe',
-    data: [`orderbook:${asset}-PERP`]
+    data: [`orderbook-100ms:${asset}-PERP`]
   })
 }
 
@@ -162,7 +175,7 @@ async function getSubTickersMsg(): Promise<string> {
   return aevoCacheGetAllMarkets(publicApi, CACHE_DAY, CACHE_DAY).then((allMarkets) => {
     const assets = allMarkets.map((m) => m.underlying_asset)
 
-    const data = assets.map((a) => `ticker:${a}:PERPETUAL`)
+    const data = assets.map((a) => `ticker-500ms:${a}:PERPETUAL`)
 
     return JSON.stringify({
       op: 'subscribe',
@@ -188,4 +201,47 @@ function _tickerChannelToAsset(channel: string): string {
 
 function _obChannelToAsset(channel: string): string {
   return channel.split(':')[1].split('-')[0]
+}
+
+////// CANDLES RELATED FUNCTIONS //////
+const candleMessageMap = new Map<string, string>()
+let aevoRealtimeCallback: SubscribeCandleArgs['onRealtimeCallback'] | undefined = undefined
+type AevoCandleRes = {
+  channel: string
+  data: { price: string; timestamp: string }
+}
+
+export function subscribeAevoCandles({ symbolInfo, subscriberUID, onRealtimeCallback }: SubscribeCandleArgs) {
+  const symbol = symbolInfo.name.split('-')[0]
+
+  //Subscribe to the channel
+  const message = {
+    op: 'subscribe',
+    data: [`index:${symbol}`]
+  }
+
+  candleMessageMap.set(subscriberUID, JSON.stringify(message.data))
+
+  if (!ws || ws.readyState !== 1) {
+    openAevoWssConnection().then(() =>
+      new Promise((resolve) => setTimeout(resolve, 2000)).then(() => {
+        ws!.send(JSON.stringify(message))
+        candleMessageMap.set(subscriberUID, JSON.stringify(message.data))
+        aevoRealtimeCallback = onRealtimeCallback
+      })
+    )
+  }
+}
+
+export function unSubscribeAevoCandles(subscriberUID: string) {
+  if (ws && ws.readyState === 1) {
+    ws.send(
+      JSON.stringify({
+        op: 'unsubscribe',
+        data: JSON.parse(candleMessageMap.get(subscriberUID) || '[]')
+      })
+    )
+  }
+  candleMessageMap.delete(subscriberUID)
+  aevoRealtimeCallback = undefined
 }

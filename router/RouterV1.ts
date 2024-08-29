@@ -1,16 +1,21 @@
+import type { BigNumber } from 'ethers'
 import type { Chain } from 'viem'
 import { arbitrum, optimism } from 'viem/chains'
 
 import { FixedNumber } from '../fixedNumber'
+import { getPythBars, getTokenPriceD, subscribeOnStream, unsubscribeFromStream } from '../pyth'
 import { errorCatcher } from '../src/common/errors'
 import { getPaginatedResponse } from '../src/common/helper'
 import { decodeMarketId } from '../src/common/markets'
 import { protocols } from '../src/common/protocols'
+import type { Token } from '../src/common/tokens'
+import { subscribeAevoCandles, unSubscribeAevoCandles } from '../src/configs/aevo'
+import { subscribeHLCandles, unSubscribeHLCandles } from '../src/configs/hyperliquid'
 import { AevoAdapterV1 } from '../src/exchanges/aevo'
 import { GmxV2Service } from '../src/exchanges/gmxv2'
 import { HyperliquidAdapterV1 } from '../src/exchanges/hyperliquid'
 import type { ActionParam } from '../src/interfaces/IActionExecutor'
-import type { IAdapterV1, ProtocolInfo } from '../src/interfaces/V1/IAdapterV1'
+import type { GetBarsParams, IAdapterV1, ProtocolInfo, TVBar } from '../src/interfaces/V1/IAdapterV1'
 import type {
   AccountInfo,
   AgentParams,
@@ -42,6 +47,7 @@ import type {
   PreviewInfo,
   Protocol,
   ProtocolId,
+  SubscribeCandleArgs,
   UpdateOrder,
   UpdatePositionMarginData
 } from '../src/interfaces/V1/IRouterAdapterBaseV1'
@@ -61,6 +67,9 @@ export default class RouterV1 implements IRouterV1 {
     this.adapters[protocols.GMXV2.symbol] = new GmxV2Service()
     this.adapters[protocols.HYPERLIQUID.symbol] = new HyperliquidAdapterV1()
     this.adapters[protocols.AEVO.symbol] = new AevoAdapterV1()
+    // this.adapters[protocols.SYNFUTURES.symbol] = new SynFuturesAdapterV1()
+    // this.adapters[protocols.PERENNIAL.symbol] = new PerennialAdapter(perennialSdk)
+    // this.adapters[protocols.ORDERLY.symbol] = new OrderlyAdapterV1()
   }
 
   clearCredentials<T extends ProtocolId>(protocol: T) {
@@ -501,5 +510,176 @@ export default class RouterV1 implements IRouterV1 {
 
     const out = (await Promise.all(obPromises)).filter((v) => !!v) as OrderBook[][]
     return out.flat()
+  }
+
+  async getTokenPrice(token: string, decimals: number): Promise<BigNumber | null> {
+    const tokenPrice = getTokenPriceD(token, decimals)
+
+    return tokenPrice
+  }
+
+  async get24hOldPrice(
+    indexSymbol: string,
+    marketsV1: MarketInfo[]
+  ): Promise<
+    { source: 'pyth' | 'hl' | 'aevo' | 'dydx' | 'hltest' | 'synfutures'; bars: TVBar[]; oldPrice: number } | undefined
+  > {
+    type DataFeedArgs = {
+      source: 'pyth' | 'hl' | 'aevo' | 'dydx' | 'hltest' | 'synfutures'
+      marketsV1: MarketInfo[] | undefined
+    }
+
+    let source: DataFeedArgs['source'] | undefined
+
+    function matchMarket(markets: MarketInfo[] | undefined, protocolId: ProtocolId, indexSymbolIn: string) {
+      if (!markets) return false
+
+      return markets?.filter((m) => m.protocolId === protocolId).some((m) => m?.marketSymbol === indexSymbolIn)
+    }
+
+    if (matchMarket(marketsV1, 'DYDXV4', indexSymbol)) {
+      source = 'dydx'
+    }
+    if (matchMarket(marketsV1, 'AEVO', indexSymbol)) {
+      source = 'aevo'
+    }
+    if (matchMarket(marketsV1, 'HL', indexSymbol)) {
+      source = 'hl'
+    }
+    if (matchMarket(marketsV1, 'SYNFUTURES', indexSymbol)) {
+      source = 'synfutures'
+    }
+
+    if (!source) {
+      source = 'pyth' // assign anyways
+    }
+
+    const now = Math.floor(Date.now() / 1000)
+    const fiveMinutesAgo = now - 5 * 60
+    const oneDayAgo = now - 24 * 60 * 60
+
+    const params: GetBarsParams = {
+      symbolInfo: indexSymbol + '-USD',
+      resolution: source === 'aevo' ? '60' : '1',
+      from: source === 'aevo' ? oneDayAgo : fiveMinutesAgo,
+      to: now,
+      countBack: 5,
+      firstDataRequest: true
+    }
+
+    let bars: TVBar[] = []
+
+    try {
+      // latest bar is first
+      bars = (await this.getBars(source, params)).toSorted((a, b) => b.time - a.time)
+      return { source, bars, oldPrice: bars[0]?.close }
+    } catch (e) {
+      console.error('get24hOldPrice error', e, params)
+    }
+  }
+
+  async getBars(
+    source: 'pyth' | 'hl' | 'aevo' | 'dydx' | 'hltest' | 'synfutures',
+    params: GetBarsParams
+  ): Promise<TVBar[]> {
+    let bars: TVBar[] = []
+
+    if (source === 'pyth') {
+      bars = await getPythBars(params)
+    } else if (source === 'aevo') {
+      bars = await this.adapters[protocols.AEVO.symbol].getBars(params)
+    } else if (source === 'hl') {
+      bars = await this.adapters[protocols.HYPERLIQUID.symbol].getBars(params)
+    } else if (source === 'dydx') {
+      bars = await this.adapters[protocols.DYDXV4.symbol].getBars(params)
+    } else if (source === 'synfutures') {
+      bars = await this.adapters[protocols.SYNFUTURES.symbol].getBars(params)
+    } else {
+      throw new Error(`Unknown source: ${source}`)
+    }
+
+    return bars
+  }
+
+  subscribeStream(
+    source: 'pyth' | 'hl' | 'aevo' | 'dydx' | 'hltest' | 'synfutures',
+    params: SubscribeCandleArgs
+  ): void {
+    const { symbolInfo, resolution, onRealtimeCallback, subscriberUID, onResetCacheNeededCallback, lastBarsCache } =
+      params
+
+    switch (source) {
+      case 'pyth':
+        return subscribeOnStream(
+          symbolInfo as { ticker: string },
+          resolution,
+          onRealtimeCallback,
+          subscriberUID,
+          onResetCacheNeededCallback,
+          lastBarsCache.get(symbolInfo.ticker!)!
+        )
+      case 'hl':
+        return subscribeHLCandles(params)
+      case 'aevo':
+        return subscribeAevoCandles(params)
+      case 'synfutures':
+        return
+      //  return subscribeHLCandles(params)
+      default:
+        throw new Error('Unknown source')
+    }
+  }
+
+  unsubscribeStream(
+    source: 'pyth' | 'hl' | 'aevo' | 'dydx' | 'hltest' | 'synfutures',
+    subscriberUID: SubscribeCandleArgs['subscriberUID']
+  ): void {
+    switch (source) {
+      case 'pyth':
+        return unsubscribeFromStream(subscriberUID)
+      case 'hl':
+        return unSubscribeHLCandles(subscriberUID)
+      case 'aevo':
+        return unSubscribeAevoCandles(subscriberUID)
+      case 'synfutures':
+        return
+      default:
+        throw new Error('Unknown source')
+    }
+  }
+
+  isOrderForPosition(order: OrderInfo, position: PositionInfo): boolean {
+    const adapter = this._checkAndGetAdapter(position.marketId)
+    return adapter.isOrderForPosition(order, position)
+  }
+
+  getDepositWithdrawTime(
+    protocolId: ProtocolId,
+    action: 'Deposit' | 'Withdraw',
+    isEthChain: boolean,
+    isArbitrumChain: boolean,
+    isOptimismChain: boolean
+  ): { deposit: string; withdraw: string } {
+    return this.adapters[protocolId].getDepositWithdrawTime(action, isEthChain, isArbitrumChain, isOptimismChain)
+  }
+
+  getMatchingPosition(
+    protocolId: ProtocolId,
+    positions: PositionInfo[],
+    market: MarketInfo,
+    collateralToken: Token,
+    order: 'long' | 'short'
+  ): PositionInfo | undefined {
+    return this.adapters[protocolId].getMatchingPosition(positions, market, collateralToken, order)
+  }
+
+  async getWithdrawableBalance(
+    protocolId: ProtocolId,
+    wallet: string,
+    collateralToken: Token,
+    market: MarketInfo,
+    opts?: ApiOpts
+  ): Promise<FixedNumber> {
+    return this.adapters[protocolId].getWithdrawableBalance(wallet, collateralToken, market, opts)
   }
 }

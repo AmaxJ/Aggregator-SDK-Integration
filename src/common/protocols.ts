@@ -1,20 +1,14 @@
 import type { Chain } from 'viem'
 import { arbitrum, optimism } from 'viem/chains'
 
+import type { ProtocolId } from '../interfaces'
+
 export interface Protocol {
-  symbol: string
+  symbol: ProtocolId
   supportedChains: Chain[]
 }
 
-export const protocols = {
-  GMXV1: {
-    symbol: 'GMXV1',
-    supportedChains: [arbitrum]
-  },
-  SNXV2: {
-    symbol: 'SYNTHETIX_V2',
-    supportedChains: [optimism]
-  },
+export const protocols: Record<string, Protocol> = {
   GMXV2: {
     symbol: 'GMXV2',
     supportedChains: [arbitrum]
@@ -37,6 +31,10 @@ export const protocols = {
   },
   SYNFUTURES: {
     symbol: 'SYNFUTURES',
+    supportedChains: [arbitrum]
+  },
+  ORDERLY: {
+    symbol: 'ORDERLY',
     supportedChains: [arbitrum]
   }
 } as const

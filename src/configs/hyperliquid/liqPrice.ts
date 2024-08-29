@@ -240,7 +240,7 @@ export function estLiqPrice(
   const assetCtx = assetCtxs[asset]
   const maxLeverage = position?.maxLeverage ?? meta.universe[asset]?.maxLeverage
   if (assetCtx === undefined || maxLeverage === undefined || leverage === null) {
-    console.log('Missing data for liquidation px, returning null', mid, assetCtx, maxLeverage, leverage, asset)
+    console.warn('Missing data for liquidation px, returning null', mid, assetCtx, maxLeverage, leverage, asset)
     return null
   }
   const szi = position?.szi ?? 0

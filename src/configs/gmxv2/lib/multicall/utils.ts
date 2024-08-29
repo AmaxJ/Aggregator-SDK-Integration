@@ -7,7 +7,7 @@ import CustomErrors from '../../abis/CustomErrors.json'
 import { sleep } from './sleep'
 import type { MulticallRequestConfig, MulticallResult } from './types'
 
-export const MAX_TIMEOUT = 20000
+export const MAX_TIMEOUT = 200000
 
 const ARBITRUM = 42161
 
@@ -156,7 +156,7 @@ export class Multicall {
       const fallbackClient = Multicall.getViemClient(this.chainId, rpcUrl)
 
       // eslint-disable-next-line no-console
-      console.log(`using multicall fallback for chain ${this.chainId}`)
+      console.warn(`using multicall fallback for chain ${this.chainId}`)
 
       return fallbackClient.multicall({ contracts: encodedPayload as any }).catch((__viemError) => {
         const e_ = new Error(__viemError.message.slice(0, 150))

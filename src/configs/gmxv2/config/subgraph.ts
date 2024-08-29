@@ -34,6 +34,5 @@ const SUBGRAPH_URLS: any = {
 }
 
 export function getSubgraphUrl(chainId: number, subgraph: string) {
-  console.log('getSubgraphUrl', chainId, subgraph)
   return SUBGRAPH_URLS?.[chainId]?.[subgraph]
 }

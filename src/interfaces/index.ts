@@ -1,5 +1,4 @@
 export * from './IActionExecutor'
-export * as legacy from './interface'
 export * from './tx-metadata-types'
 export * from './V1/IAdapterV1'
 export * from './V1/IRouterAdapterBaseV1'

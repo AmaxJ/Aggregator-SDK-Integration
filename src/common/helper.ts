@@ -1,10 +1,11 @@
+/* eslint-disable prefer-const */
 import type { BigNumberish } from 'ethers'
 import { BigNumber, ethers } from 'ethers'
 import { retry } from 'ts-retry-promise'
 
 import { FixedNumber, tenPow } from '../../fixedNumber'
-import type { NumberDecimal, PageOptions, PaginatedRes } from '../interfaces/interface'
-import type { AmountInfo, ApiOpts, OBLevel } from '../interfaces/V1/IRouterAdapterBaseV1'
+import type { NumberDecimal } from '../../pyth'
+import type { AmountInfo, ApiOpts, OBLevel, PageOptions, PaginatedRes } from '../interfaces/V1/IRouterAdapterBaseV1'
 import { cacheFetch } from './cache'
 import { ZERO } from './constants'
 import type { PythPriceRes } from './types'
@@ -24,7 +25,9 @@ function keys(obj: object) {
 export function logObject(title: string = '', obj: any) {
   console.log(
     title,
-    keys(obj).map((key) => key + ': ' + (obj[key] ? obj[key].toString() : ''))
+    keys(obj).map(
+      (key) => key + ': ' + (obj[key] ? (obj[key].amount ? obj[key].amount.toString() : obj[key].toString()) : '')
+    )
   )
 }
 
@@ -80,7 +83,7 @@ export function toAmountInfoFN(val: FixedNumber, isTokens: boolean): AmountInfo 
 }
 
 export function toAmountInfo(
-  val: BigNumber,
+  val: bigint | BigNumber,
   valDecimals: number,
   isTokens: boolean,
   outDecimals: number = valDecimals
@@ -208,7 +211,6 @@ export function precisionFromNumber(inputNumber: number): string {
   // Split the number into integer and decimal parts
   const [integerPart, decimalPart] = hasDecimalPoint ? numberString.split('.') : [numberString, '']
 
-  const integerPartNumber: number = Number(integerPart)
   const decimalPartNumber: number = decimalPart == '' ? 0 : Number(decimalPart)
 
   if (decimalPartNumber > 0) {
@@ -294,4 +296,25 @@ export async function getPythEthPrice(staleTime: number, opts?: ApiOpts): Promis
   const expo = tenPow(priceJson.parsed[0].price.expo)
 
   return price.mul(expo)
+}
+
+export function eToNumber(num: string) {
+  let sign = ''
+  ;(num += '').charAt(0) == '-' && ((num = num.substring(1)), (sign = '-'))
+  let arr = num.split(/[e]/gi)
+  if (arr.length < 2) return sign + num
+  let dot = (0.1).toLocaleString().substr(1, 1),
+    n = arr[0],
+    exp = +arr[1],
+    w = (n = n.replace(/^0+/, '')).replace(dot, ''),
+    pos = n.split(dot)[1] ? n.indexOf(dot) + exp : w.length + exp,
+    L = pos - w.length,
+    s = '' + BigInt(w)
+  w = exp >= 0 ? (L >= 0 ? s + '0'.repeat(L) : r()) : pos <= 0 ? '0' + dot + '0'.repeat(Math.abs(pos)) + s : r()
+  let LN = w.split(dot)
+  if ((LN[0] == '0' && LN[1] == '0') || (+w == 0 && +s == 0)) w = '0'
+  return sign + w
+  function r() {
+    return w.replace(new RegExp(`^(.{${pos}})(.)`), `$1${dot}$2`)
+  }
 }

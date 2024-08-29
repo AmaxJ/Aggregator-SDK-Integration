@@ -37,7 +37,7 @@ export const contractFetcher =
       }
 
       // eslint-disable-next-line no-console
-      console.info('using fallbackProvider for', method)
+      // console.info('using fallbackProvider for', method)
       const fallbackContractCall = getContractCall({
         provider: fallbackProvider,
         contractInfo,

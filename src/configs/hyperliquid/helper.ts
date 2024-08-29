@@ -1,5 +1,6 @@
 import { abs, addFN, bipsDiff, divFN, FixedNumber, mulFN, subFN } from '../../../fixedNumber'
 import { countSignificantDigits, precisionFromNumber } from '../../common/helper'
+import type { TVBar } from '../../interfaces/V1/IAdapterV1'
 import type { OBData, OBLevel, OrderType, TimeInForce, TriggerData } from '../../interfaces/V1/IRouterAdapterBaseV1'
 import { roundedPrice } from './api/client'
 import type { L2Book, Level, ModifyRequest, Tif } from './api/types'
@@ -194,4 +195,49 @@ export function hlMapL2BookToObData(l2Book: L2Book, precision: number): OBData {
   }
 
   return obData
+}
+
+export const hlResolutions: Record<string, string> = {
+  '1': '1m',
+  '3': '3m',
+  '5': '5m',
+  '15': '15m',
+  '30': '30m',
+  '60': '1h',
+  '120': '2h',
+  '240': '4h',
+  '360': '6h',
+  '480': '8h',
+  '720': '12h',
+  D: '1d',
+  '1D': '1d',
+  '3D': '3d',
+  W: '1w',
+  '1W': '1w',
+  M: '1M',
+  '1M': '1M'
+}
+
+export type HlCandle = {
+  T: number
+  c: string
+  h: string
+  i: string
+  l: string
+  n: number
+  o: string
+  s: string
+  t: number
+  v: string
+}
+
+export function hlCandleToBar(candle: HlCandle): TVBar {
+  return {
+    time: candle.T,
+    low: Number(candle.l),
+    high: Number(candle.h),
+    open: Number(candle.o),
+    close: Number(candle.c),
+    volume: Number(candle.v)
+  }
 }

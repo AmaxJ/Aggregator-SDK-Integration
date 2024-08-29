@@ -1,10 +1,15 @@
 import { PriceServiceConnection } from '@pythnetwork/price-service-client'
 import { BigNumber, ethers } from 'ethers'
 
-import type { NumberDecimal } from '../src/interfaces/interface'
+import type { GetBarsParams } from '../src/interfaces'
 
 // Assuming you're working in a browser environment that supports fetch and ReadableStream
 const streamingUrl = 'https://benchmarks.pyth.network/v1/shims/tradingview/streaming'
+
+export type NumberDecimal = {
+  value: string
+  decimals: number
+}
 
 interface Bar {
   time: number
@@ -111,7 +116,7 @@ function handleStreamingData(data: { id: string; p: number; t: number }) {
 }
 
 export function startStreaming(retries = 3, delay = 3000) {
-  console.log('price streaming started')
+  // console.log('price streaming started')
 
   if (!isTVStreamingOn) {
     isTVStreamingOn = true
@@ -139,7 +144,7 @@ export function startStreaming(retries = 3, delay = 3000) {
                       handleStreamingData(jsonData)
                     }
                   } catch (e) {
-                    // console.error("Error parsing JSON:");
+                    // console.error('Error parsing JSON:', trimmedDataString, e)
                   }
                 }
               })
@@ -158,13 +163,13 @@ export function startStreaming(retries = 3, delay = 3000) {
         console.error('[stream] Error fetching from the streaming endpoint:', error)
       })
   } else {
-    console.log('[stream] Streaming already running.')
+    // console.log('[stream] Streaming already running.')
   }
 
   function attemptReconnect(retriesLeft: number, inDelay: number) {
     isTVStreamingOn = false
     if (retriesLeft > 0) {
-      console.log(`[stream] Attempting to reconnect in ${inDelay}ms...`)
+      // console.log(`[stream] Attempting to reconnect in ${inDelay}ms...`)
       setTimeout(() => {
         startStreaming(retriesLeft - 1, inDelay)
       }, inDelay)
@@ -197,7 +202,7 @@ export function subscribeOnStream(
     handlers: [handler]
   }
   channelToSubscription.set(channelString, subscriptionItem)
-  console.log('[subscribeBars]: Subscribe to streaming. Channel:', channelString)
+  // console.log('[subscribeBars]: Subscribe to streaming. Channel:', channelString)
 }
 
 export function unsubscribeFromStream(subscriberUID: string) {
@@ -206,7 +211,7 @@ export function unsubscribeFromStream(subscriberUID: string) {
     const subscriptionItem = channelToSubscription.get(channelString)
 
     if (!subscriptionItem) {
-      console.log('[unsubscribeBars]: Subscription item not found')
+      // console.log('[unsubscribeBars]: Subscription item not found')
       break
     }
 
@@ -214,7 +219,7 @@ export function unsubscribeFromStream(subscriberUID: string) {
 
     if (handlerIndex !== -1) {
       // Unsubscribe from the channel if it is the last handler
-      console.log('[unsubscribeBars]: Unsubscribe from streaming. Channel:', channelString)
+      // console.log('[unsubscribeBars]: Unsubscribe from streaming. Channel:', channelString)
       channelToSubscription.delete(channelString)
       break
     }
@@ -322,7 +327,12 @@ const priceIdsMap: Record<string, string> = {
   '0x0a0408d619e9380abad35060f9192039ed5042fa6f82301d0e48bb52be830996': 'JUP',
   '0x6aac625e125ada0d2a6b98316493256ca733a5808cd34ccef79b0e28c64d1e76': 'CVX',
   '0x6a182399ff70ccf3e06024898942028204125a819e519a335ffa4579e66cd870': 'STRK',
-  '0x41283d3f78ccb459a24e5f1f1b9f5a72a415a26ff9ce0391a6878f4cda6b477b': 'USDB'
+  '0x41283d3f78ccb459a24e5f1f1b9f5a72a415a26ff9ce0391a6878f4cda6b477b': 'USDB',
+  '0x06c217a791f5c4f988b36629af4cb88fad827b2485400a358f3b02886b54de92': 'ezETH',
+  '0x9ee4e7c60b940440a261eb54b6d8149c23b580ed7da3139f7f08f4ea29dad395': 'weETH',
+  '0x246db9051be6bdfdbbd75eb7dfbeaa23bf343456843d4cc878e930250fc17582': 'YES',
+  '0x4ca4beeca86f0d164160323817a4e42b10010a724c2217c6ee41b54cd4cc61fc': 'WIF',
+  '0x057345a7e9ef0f36dca8ad1c4e5788808b85f3084cc7b0d8cb29ac5012d88f0d': 'BLAST'
 }
 const priceIds = Object.keys(priceIdsMap)
 
@@ -337,7 +347,7 @@ const connection = new PriceServiceConnection('https://hermes.pyth.network', {
 let isHermesStreamingOn = false
 
 export function startHermesStreaming(retries = 10, delay = 3000) {
-  console.log('[HERMES] price streaming started')
+  // console.log('[HERMES] price streaming started')
 
   if (!isHermesStreamingOn) {
     try {
@@ -374,13 +384,13 @@ export function startHermesStreaming(retries = 10, delay = 3000) {
       attemptReconnect(retries, delay)
     }
   } else {
-    console.log('[HERMES] Streaming already running.')
+    // console.log('[HERMES] Streaming already running.')
   }
 
   function attemptReconnect(retriesLeft: number, inDelay: number) {
     isHermesStreamingOn = false
     if (retriesLeft > 0) {
-      console.log(`[HERMES] Attempting to reconnect in ${inDelay}ms...`)
+      // console.log(`[HERMES] Attempting to reconnect in ${inDelay}ms...`)
       setTimeout(() => {
         startHermesStreaming(retriesLeft - 1, inDelay)
       }, inDelay)
@@ -394,16 +404,33 @@ export function isHermesStreaming(): boolean {
   return isHermesStreamingOn
 }
 
-export function getTokenPrice(token: string) {
-  if (['sUSD', 'HL-USD', 'AEVO-USD', 'DYDX-USD', 'PN-USD'].includes(token)) return UnitPrice
+function getPriceInUSDC(baseToken: string, quoteToken: string) {
+  const base = getTokenPriceFromHermesMap(baseToken)
+  const quote = getTokenPriceFromHermesMap(quoteToken)
+  if (base && quote) {
+    const value = BigNumber.from(base.value).mul(quote.value).div(BigNumber.from(10).pow(quote.decimals))
+    return {
+      decimals: base.decimals,
+      value: value,
+      formatted: ethers.utils.formatUnits(value, base.decimals)
+    }
+  }
+}
 
-  if (token === 'sETH') token = 'ETH'
-  if (token === 'sBTC') token = 'BTC'
-  if (token === 'WETH') token = 'ETH'
-  if (token === 'WBTC') token = 'BTC'
-  if (token === 'WBTC.b') token = 'BTC'
-  if (token === 'USDC.e') token = 'USDC'
+function getPriceInToken(baseToken: string, quoteToken: string) {
+  const base = getTokenPriceFromHermesMap(baseToken)
+  const quote = getTokenPriceFromHermesMap(quoteToken)
+  if (base && quote) {
+    const value = BigNumber.from(base.value).mul(BigNumber.from(10).pow(quote.decimals)).div(quote.value)
+    return {
+      decimals: base.decimals,
+      value: value,
+      formatted: ethers.utils.formatUnits(value, base.decimals)
+    }
+  }
+}
 
+function getTokenPriceFromHermesMap(token: string) {
   const priceStampHermes = hermesPricesMap[token]
   const priceStampTV = prices[token]
 
@@ -419,6 +446,26 @@ export function getTokenPrice(token: string) {
     value,
     formatted: ethers.utils.formatUnits(value, decimals)
   }
+}
+
+export function getTokenPrice(token: string) {
+  if (['sUSD', 'HL-USD', 'AEVO-USD', 'DYDX-USD', 'PN-USD'].includes(token)) return UnitPrice
+
+  if (token === 'sETH') token = 'ETH'
+  if (token === 'sBTC') token = 'BTC'
+  if (token === 'WETH') token = 'ETH'
+  if (token === 'WBTC') token = 'BTC'
+  if (token === 'WBTC.b') token = 'BTC'
+  if (token === 'USDC.e') token = 'USDC'
+  if (token === 'STETHWETH') token = 'STETHETH'
+  if (token === 'ezETHETH') return getPriceInToken('ezETH', 'ETH')
+  if (token === 'weETHETH') return getPriceInToken('weETH', 'ETH')
+  if (token === 'YESWETH') return getPriceInToken('YES', 'ETH')
+  if (token === 'BTCWETH') return getPriceInToken('BTC', 'ETH')
+  if (token === 'WIFWETH') return getPriceInToken('WIF', 'ETH')
+  if (token === 'BLASTETH') return getPriceInToken('BLAST', 'ETH')
+
+  return getTokenPriceFromHermesMap(token)
 }
 
 export function getTokenPriceD(token: string, decimals: number) {
@@ -445,4 +492,41 @@ function _getLatestPriceStamp(priceStampHermes: PriceStamp | undefined, priceSta
   if (priceStampHermes.timestamp > priceStampTV.timestamp) return priceStampHermes
 
   return priceStampTV
+}
+
+export async function getPythBars({ symbolInfo, resolution, from, to }: GetBarsParams): Promise<Bar[]> {
+  let pythSymbolInfo = 'Crypto.' + symbolInfo.replace('-', '/')
+
+  if (pythSymbolInfo.includes('ETHBTC')) {
+    pythSymbolInfo = 'Crypto.ETH/BTC'
+  } else if (pythSymbolInfo.includes('STETHETH')) {
+    pythSymbolInfo = 'Crypto.STETH/ETH'
+  }
+
+  const bars: Bar[] = []
+
+  type BenchmarkData = {
+    t: number[]
+    o: number[]
+    h: number[]
+    l: number[]
+    c: number[]
+  }
+
+  const reqUrl = `https://benchmarks.pyth.network/v1/shims/tradingview/history?symbol=${pythSymbolInfo}&resolution=${resolution}&from=${from}&to=${to}`
+
+  const pricesData = await fetch(reqUrl).then((d) => d.json() as Promise<BenchmarkData>)
+
+  for (const i in pricesData.t) {
+    bars.push({
+      time: pricesData.t[i] * 1000,
+      low: pricesData.l[i],
+      high: pricesData.h[i],
+      open: pricesData.o[i],
+      close: pricesData.c[i],
+      volume: 0
+    })
+  }
+
+  return bars
 }

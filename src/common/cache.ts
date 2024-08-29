@@ -11,13 +11,12 @@ export const CACHE_TIME_MULT = 2
 
 export const GMX_COMMON_CACHE_PREFIX = 'gmx'
 export const GMXV2_CACHE_PREFIX = 'gmxv2'
-export const GMXV1_CACHE_PREFIX = 'gmxv1'
-export const SYNV2_CACHE_PREFIX = 'synv2'
 export const HL_CACHE_PREFIX = 'hl'
 export const AEVO_CACHE_PREFIX = 'aevo'
 export const DYDXV4_CACHE_PREFIX = 'dydxv4'
 export const SYNFUTURES_CACHE_PREFIX = 'synfutures'
 export const PERENNIAL_CACHE_PREFIX = 'perennial'
+export const ORDERLY_CACHE_PREFIX = 'orderly'
 
 const queryClient = new QueryClient({
   defaultOptions: {

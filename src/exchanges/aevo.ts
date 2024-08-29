@@ -97,9 +97,10 @@ import {
   SIZE_DENOMINATION_TOKEN
 } from '../configs/hyperliquid/hlErrors'
 import type { ActionParam, RequestSignerFn } from '../interfaces/IActionExecutor'
-import type { IAdapterV1, ProtocolInfo } from '../interfaces/V1/IAdapterV1'
+import type { GetBarsParams, IAdapterV1, ProtocolInfo, TVBar } from '../interfaces/V1/IAdapterV1'
 import type {
   AccountInfo,
+  AccountInfoData,
   AgentParams,
   AgentState,
   AmountInfo,
@@ -299,7 +300,8 @@ export class AevoAdapterV1 implements IAdapterV1 {
         10: [tokens.USDC, tokens['USDC.e'], tokens.WETH, tokens.ETH],
         42161: [tokens.USDC, tokens['USDC.e'], tokens.WETH, tokens.ETH],
         81457: []
-      }
+      },
+      minimumDepositAmountUsd: ZERO_FN
     }
 
     return info
@@ -1964,6 +1966,85 @@ export class AevoAdapterV1 implements IAdapterV1 {
     }
 
     return orderBooks
+  }
+
+  async getBars(params: GetBarsParams): Promise<TVBar[]> {
+    const { symbolInfo, resolution, from, to, countBack, firstDataRequest } = params
+
+    const symbol = symbolInfo.split('-')[0]
+
+    const reqUrl = new URL('https://api.aevo.xyz/last-traded-tradingview/history')
+
+    reqUrl.searchParams.append('symbol', `${symbol}-PERP`)
+    reqUrl.searchParams.append('resolution', resolution)
+    reqUrl.searchParams.append('from', String(from))
+    reqUrl.searchParams.append('to', String(to))
+    reqUrl.searchParams.append('countBack', String(countBack))
+    reqUrl.searchParams.append('firstDataRequest', String(firstDataRequest))
+
+    type AevoResponse = {
+      s: string
+      t: number[]
+      c: number[]
+      o: number[]
+      h: number[]
+      l: number[]
+      v: number[]
+    }
+
+    // convert above axios to fetch
+    const res = await fetch(reqUrl.toString())
+    const data = (await res.json()) as AevoResponse
+
+    const bars: TVBar[] = []
+
+    for (const i in data.t) {
+      bars.push({
+        time: data.t[i] * 1000,
+        low: data.l[i],
+        high: data.h[i],
+        open: data.o[i],
+        close: data.c[i],
+        volume: data.v[i]
+      })
+    }
+
+    return bars
+  }
+
+  isOrderForPosition(order: OrderInfo, position: PositionInfo): boolean {
+    return order.marketId === position.marketId
+  }
+
+  getDepositWithdrawTime(_: 'Deposit' | 'Withdraw'): { deposit: string; withdraw: string } {
+    return {
+      deposit: '5 Mins',
+      withdraw: '3 Hours'
+    }
+  }
+
+  getMatchingPosition(
+    positions: PositionInfo[],
+    market: MarketInfo,
+    _collateralToken: Token,
+    _order: 'long' | 'short'
+  ): PositionInfo | undefined {
+    return positions.find((p) => p.marketId === market.marketId)
+  }
+
+  async getWithdrawableBalance(
+    wallet: string,
+    collateralToken: Token,
+    _market: MarketInfo,
+    opts?: ApiOpts
+  ): Promise<FixedNumber> {
+    const accInfoData = (await this.getAccountInfo(wallet, opts))[0].accountInfoData as AccountInfoData<'AEVO'>
+
+    return FixedNumber.fromString(
+      accInfoData.storedCollateral?.find(
+        (c) => c.collateral_asset.toLowerCase() === collateralToken.symbol.toLowerCase()
+      )?.withdrawable_balance || '0'
+    )
   }
 
   /// Internal helper functions ///

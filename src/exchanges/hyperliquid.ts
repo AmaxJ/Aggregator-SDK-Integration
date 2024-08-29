@@ -19,6 +19,7 @@ import { ZERO_FN } from '../common/constants'
 import { getPaginatedResponse, toAmountInfoFN, validDenomination } from '../common/helper'
 import { encodeMarketId } from '../common/markets'
 import { rpc } from '../common/provider'
+import type { Token } from '../common/tokens'
 import { tokens } from '../common/tokens'
 import type { TraverseResult } from '../common/types'
 import { ARBITRUM } from '../configs/gmx/chains'
@@ -75,9 +76,12 @@ import type {
   WebData2
 } from '../configs/hyperliquid/api/types'
 import { hlGetCachedL2Book, hlGetCachedOrderBook } from '../configs/hyperliquid/api/wsclient'
+import type { HlCandle } from '../configs/hyperliquid/helper'
 import {
+  hlCandleToBar,
   hlMapL2BookToObData,
   hlMarketIdToCoin,
+  hlResolutions,
   indexBasisSlippage,
   populateTrigger,
   toTif
@@ -98,9 +102,10 @@ import {
 import { estLiqPrice } from '../configs/hyperliquid/liqPrice'
 import { traverseHLBook } from '../configs/hyperliquid/obTraversal'
 import type { ActionParam } from '../interfaces/IActionExecutor'
-import type { IAdapterV1, ProtocolInfo } from '../interfaces/V1/IAdapterV1'
+import type { GetBarsParams, IAdapterV1, ProtocolInfo, TVBar } from '../interfaces/V1/IAdapterV1'
 import type {
   AccountInfo,
+  AccountInfoData,
   AgentParams,
   AgentState,
   AmountInfo,
@@ -283,7 +288,8 @@ export class HyperliquidAdapterV1 implements IAdapterV1 {
         10: [],
         42161: [tokens.USDC],
         81457: []
-      }
+      },
+      minimumDepositAmountUsd: ZERO_FN
     }
 
     return info
@@ -1885,6 +1891,62 @@ export class HyperliquidAdapterV1 implements IAdapterV1 {
     }
 
     return orderBooks
+  }
+
+  async getBars(params: GetBarsParams): Promise<TVBar[]> {
+    const { symbolInfo, resolution, from, to } = params
+    const symbol = symbolInfo.split('-')[0]
+
+    const reqUrl = `https://api.hyperliquid.xyz/info`
+
+    const pricesData = await fetch(reqUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'candleSnapshot',
+        req: {
+          coin: symbol,
+          interval: hlResolutions[resolution],
+          startTime: from * 1000,
+          endTime: to * 1000
+        }
+      })
+    }).then((res) => res.json() as Promise<HlCandle[]>)
+
+    return pricesData.map(hlCandleToBar)
+  }
+
+  isOrderForPosition(order: OrderInfo, position: PositionInfo): boolean {
+    return order.marketId === position.marketId
+  }
+
+  getDepositWithdrawTime(_: 'Deposit' | 'Withdraw'): { deposit: string; withdraw: string } {
+    return {
+      deposit: '5 Mins',
+      withdraw: '10 Mins'
+    }
+  }
+
+  getMatchingPosition(
+    positions: PositionInfo[],
+    market: MarketInfo,
+    _collateralToken: Token,
+    _order: 'long' | 'short'
+  ): PositionInfo | undefined {
+    return positions.find((p) => p.marketId === market.marketId)
+  }
+
+  async getWithdrawableBalance(
+    wallet: string,
+    _collateralToken: Token,
+    _market: MarketInfo,
+    opts?: ApiOpts
+  ): Promise<FixedNumber> {
+    const accInfoData = (await this.getAccountInfo(wallet, opts))[0].accountInfoData as AccountInfoData<'HL'>
+
+    return FixedNumber.fromString(accInfoData.withdrawable.toString())
   }
 
   async _getApiObData(marketId: string, precision: number, opts?: ApiOpts | undefined): Promise<OBData> {

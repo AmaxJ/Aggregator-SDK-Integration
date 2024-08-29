@@ -25,7 +25,8 @@ import { getAddress, parseUnits, zeroAddress } from 'viem'
 import { arbitrum, arbitrum as arbitrumChain, blast, optimism } from 'viem/chains'
 
 import { FixedNumber } from '../../fixedNumber'
-import type { IAdapterV1, ProtocolInfo } from '../../src/interfaces/V1/IAdapterV1'
+import { getPythBars } from '../../pyth'
+import type { GetBarsParams, IAdapterV1, ProtocolInfo, TVBar } from '../../src/interfaces/V1/IAdapterV1'
 import {
   CANCEL_ORDER_H,
   CLOSE_POSITION_H,
@@ -166,12 +167,6 @@ export class PerennialAdapter implements IAdapterV1 {
 
   constructor(perennialSdk: PerennialSDK) {
     this.sdk = perennialSdk
-    // new PerennialSDK({
-    //   chainId: arbitrum.id,
-    //   rpcUrl: rpc[42161].connection.url,
-    //   graphUrl,
-    //   pythUrl
-    // })
   }
 
   async init(wallet: string | undefined, _?: ApiOpts | undefined): Promise<void> {
@@ -1150,7 +1145,8 @@ export class PerennialAdapter implements IAdapterV1 {
         10: [],
         81457: [],
         42161: [tokens['USDC']]
-      }
+      },
+      minimumDepositAmountUsd: ZERO_FN
     }
     return info
   }
@@ -1420,6 +1416,51 @@ export class PerennialAdapter implements IAdapterV1 {
       ordersForPosition[posId] = getPaginatedResponse(ordersForPositionInternal[posId], pageOptions)
     }
     return ordersForPosition
+  }
+
+  // TODO: Implement
+  async getBars(params: GetBarsParams): Promise<TVBar[]> {
+    return getPythBars(params)
+  }
+
+  isOrderForPosition(order: OrderInfo, position: PositionInfo): boolean {
+    return order.marketId === position.marketId
+  }
+
+  getDepositWithdrawTime(_: 'Deposit' | 'Withdraw'): { deposit: string; withdraw: string } {
+    return {
+      deposit: '5 Mins',
+      withdraw: '10 Mins'
+    }
+  }
+
+  getMatchingPosition(
+    positions: PositionInfo[],
+    market: MarketInfo,
+    _collateralToken: Token,
+    _order: 'long' | 'short'
+  ): PositionInfo | undefined {
+    return positions.find((p) => p.marketId === market.marketId)
+  }
+
+  async getWithdrawableBalance(
+    wallet: string,
+    _collateralToken: Token,
+    market: MarketInfo,
+    opts?: ApiOpts
+  ): Promise<FixedNumber> {
+    const accInfoData = (await this.getAccountInfo(wallet, opts))[0].accountInfoData as AccountInfoData<'PERENNIAL'>
+
+    return FixedNumber.fromString(
+      (
+        Number(
+          accInfoData?.balances?.find((b) => b.asset.toLowerCase() === market?.marketSymbol.toLowerCase())?.withdrawable
+            ?.value
+        ) / 1e18
+      )
+        .toFixed(3)
+        .toString() || '0'
+    )
   }
 
   /** Internal Methods */

@@ -178,6 +178,24 @@ const tokens = [
     priceDecimals: 12,
     imageUrl: 'https://assets.coingecko.com/coins/images/18323/small/arbit.png?1631532468',
     coingeckoUrl: 'https://www.coingecko.com/en/coins/gmx'
+  },
+  {
+    name: 'Pepe',
+    symbol: 'PEPE',
+    address: '0x25d887Ce7a35172C62FeBFD67a1856F20FaEbB00',
+    decimals: 18,
+    priceDecimals: 12,
+    imageUrl: 'https://assets.coingecko.com/coins/images/29850/standard/pepe-token.jpeg?1696528776',
+    coingeckoUrl: 'https://www.coingecko.com/en/coins/pepe'
+  },
+  {
+    name: 'dogwifhat',
+    symbol: 'WIF',
+    address: '0xA1b91fe9FD52141Ff8cac388Ce3F10BFDc1dE79d',
+    decimals: 6,
+    priceDecimals: 24,
+    imageUrl: 'https://assets.coingecko.com/coins/images/33566/standard/dogwifhat.jpg?1702499428',
+    coingeckoUrl: 'https://www.coingecko.com/en/coins/dogwifhat'
   }
 ]
 

@@ -4,6 +4,7 @@ import type { FixedNumber } from '../../../fixedNumber'
 import type { AevoClient } from '../../../generated/aevo'
 import type { SupportedChains, Token } from '../../common/tokens'
 import type { ActionParam } from '../IActionExecutor'
+import type { TVBar } from './IAdapterV1'
 /**
  * Represents the authentication information required for AEVO protocol.
  * @property apiKey The API key for authentication.
@@ -12,6 +13,10 @@ import type { ActionParam } from '../IActionExecutor'
 export type AevoAuth = {
   apiKey: string
   secret: string
+}
+
+export type OrderlyAuth = {
+  ed22519PrivateKey: Uint8Array
 }
 
 /**
@@ -36,6 +41,7 @@ export type ApiOpts = {
   bypassCache: boolean
   overrideStaleTime?: number
   aevoAuth?: AevoAuth
+  orderlyAuth?: OrderlyAuth
 }
 
 /**
@@ -71,7 +77,7 @@ export type OrderAction = 'CREATE' | 'UPDATE' | 'CANCEL'
 /**
  * Represents the protocol ID.
  */
-export type ProtocolId = 'GMXV1' | 'SYNTHETIX_V2' | 'GMXV2' | 'HL' | 'AEVO' | 'DYDXV4' | 'SYNFUTURES' | 'PERENNIAL'
+export type ProtocolId = 'GMXV2' | 'HL' | 'AEVO' | 'DYDXV4' | 'SYNFUTURES' | 'PERENNIAL' | 'ORDERLY'
 
 /**
  * Represents the type of trade operation.
@@ -115,13 +121,20 @@ export type Protocol = {
 /**
  * Represents the parameters to retreive available for trading based on the protocol.
  */
-export type AvailableToTradeParams<T extends ProtocolId> = T extends 'GMXV1' | 'GMXV2' | 'AEVO' | 'DYDXV4' | 'HL'
+export type AvailableToTradeParams<T extends ProtocolId> = T extends 'GMXV2' | 'AEVO' | 'DYDXV4' | 'HL' | 'ORDERLY'
   ? undefined
-  : T extends 'SYNTHETIX_V2' | 'SYNFUTURES' | 'PERENNIAL'
+  : T extends 'SYNFUTURES' | 'PERENNIAL'
     ? { market: Market['marketId'] }
     : never
 
-export type AuthParams<T extends ProtocolId> = T extends 'AEVO' ? AevoAuth : T extends 'DYDXV4' ? DydxAuth : undefined
+export type AuthParams<T extends ProtocolId> = T extends 'AEVO'
+  ? AevoAuth
+  : T extends 'DYDXV4'
+    ? DydxAuth
+    : T extends 'ORDERLY'
+      ? OrderlyAuth
+      : undefined
+
 /**
  * Represents the parameters required for depositing or withdrawing assets.
  * @property amount The amount to deposit or withdraw.
@@ -214,29 +227,6 @@ export type GenericStaticMarketMetadata = {
   amountStep: FixedNumber | undefined
   priceStep: FixedNumber | undefined
 }
-
-/**
- * Represents Synthetix V2 static market metadata.
- * @property address The address.
- * @property asset The asset.
- */
-export type SynV2StaticMarketMetadata = GenericStaticMarketMetadata & {
-  address: string
-  asset: string
-}
-
-/**
- * Represents static market metadata.
- */
-export type StaticMarketMetadata =
-  | {
-      protocolId: 'GMXV1'
-      data: GenericStaticMarketMetadata
-    }
-  | {
-      protocolId: 'SYNTHETIX_V2'
-      data: SynV2StaticMarketMetadata
-    }
 
 /**
  * Represents dynamic market metadata.
@@ -606,7 +596,7 @@ export type RouterAdapterMethod = keyof IRouterAdapterBaseV1
 /**
  * Represents the stored collateral data per protocol.
  */
-type StoredCollateralData<T extends ProtocolId> = T extends 'GMXV1' | 'GMXV2' | 'SYNTHETIX_V2' | 'HL'
+type StoredCollateralData<T extends ProtocolId> = T extends 'GMXV2' | 'HL'
   ? undefined
   : T extends 'AEVO'
     ? Awaited<ReturnType<(typeof AevoClient)['prototype']['privateApi']['getAccount']>>['collaterals']
@@ -617,9 +607,9 @@ type StoredCollateralData<T extends ProtocolId> = T extends 'GMXV1' | 'GMXV2' | 
 /**
  * Represents account information per protocol.
  * */
-export type AccountInfoData<T extends ProtocolId> = T extends 'GMXV1' | 'GMXV2' | 'SYNTHETIX_V2'
+export type AccountInfoData<T extends ProtocolId> = T extends 'GMXV2'
   ? undefined
-  : T extends 'HL'
+  : T extends 'HL' | 'ORDERLY'
     ? {
         accountEquity: FixedNumber // The equity of the account.
         totalMarginUsed: FixedNumber // The total margin used.
@@ -730,6 +720,22 @@ export type OrderBook = {
   marketId: Market['marketId']
   precisionOBData: Record<number, OBData>
   actualPrecisionsMap: Record<number, FixedNumber>
+}
+
+/**
+ * Represents the candle data args for wss connections
+ * @property symbolInfo The symbol information.
+ * @property resolution The resolution.
+ * @property subscriberUID The subscriber UID.
+ * @property onRealtimeCallback The callback function.
+ */
+export type SubscribeCandleArgs = {
+  symbolInfo: { name: string; ticker?: string }
+  resolution: string
+  subscriberUID: string
+  onRealtimeCallback: (data: TVBar) => void
+  onResetCacheNeededCallback: () => void
+  lastBarsCache: Map<string, TVBar>
 }
 
 /**

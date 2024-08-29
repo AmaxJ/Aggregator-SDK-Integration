@@ -53,7 +53,7 @@ export async function useOrdersInfo(
 
       if (!orderInfo) {
         // eslint-disable-next-line no-console
-        console.warn(`OrderInfo parsing error`, JSON.stringify(order))
+        console.error(`OrderInfo parsing error`, JSON.stringify(order))
 
         return acc
       }

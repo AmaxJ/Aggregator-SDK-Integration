@@ -1,9 +1,11 @@
+import type { Provider } from '@ethersproject/providers'
 import { BigNumber, ethers } from 'ethers'
 import { formatUnits, parseUnits } from 'ethers/lib/utils'
 import type { Chain } from 'viem/chains'
 import { arbitrum } from 'viem/chains'
 
 import { divFN, FixedNumber } from '../../fixedNumber'
+import { getPythBars } from '../../pyth'
 import { ReferralStorage__factory } from '../../typechain/gmx-v1'
 import type { Reader } from '../../typechain/gmx-v2/typechain/contracts/reader/Reader'
 import { IERC20__factory } from '../../typechain/gmx-v2/typechain/factories/@openzeppelin/contracts/token/ERC20/IERC20__factory'
@@ -88,8 +90,7 @@ import {
   getNextPositionValuesForIncreaseTrade
 } from '../configs/gmxv2/trade/utils/increase'
 import type { ActionParam } from '../interfaces/IActionExecutor'
-import type { OrderDirection, Provider } from '../interfaces/interface'
-import type { IAdapterV1, ProtocolInfo } from '../interfaces/V1/IAdapterV1'
+import type { GetBarsParams, IAdapterV1, ProtocolInfo, TVBar } from '../interfaces/V1/IAdapterV1'
 import type {
   AccountInfo,
   AgentParams,
@@ -375,7 +376,8 @@ export class GmxV2Service implements IAdapterV1 {
       explicitFundingClaim: true,
       collateralDeltaInToken: true,
       collateralUsesLimitPricing: true,
-      depositData: undefined
+      depositData: undefined,
+      minimumDepositAmountUsd: ZERO_FN
     }
 
     return info
@@ -444,15 +446,15 @@ export class GmxV2Service implements IAdapterV1 {
       const fundingRateShort = getFundingFactorPerPeriod(info, false, 3_600)
 
       metadata.push({
-        oiLong: FixedNumber.fromString(formatUnits(longOI, 30), 'fixed128x30'),
-        oiShort: FixedNumber.fromString(formatUnits(shortOI, 30), 'fixed128x30'),
+        oiLong: FixedNumber.fromString(formatUnits(longOI, 30), 30),
+        oiShort: FixedNumber.fromString(formatUnits(shortOI, 30), 30),
         isOiBifurcated: true,
-        availableLiquidityLong: FixedNumber.fromString(formatUnits(availLiqLong, 30), 'fixed128x30'),
-        availableLiquidityShort: FixedNumber.fromString(formatUnits(availLiqShort, 30), 'fixed128x30'),
-        longFundingRate: FixedNumber.fromString(formatUnits(fundingRateLong, 30), 'fixed128x30'),
-        shortFundingRate: FixedNumber.fromString(formatUnits(fundingRateShort, 30), 'fixed128x30'),
-        longBorrowRate: FixedNumber.fromString(formatUnits(borrowingRateLong, 30), 'fixed128x30'),
-        shortBorrowRate: FixedNumber.fromString(formatUnits(borrowingRateShort, 30), 'fixed128x30')
+        availableLiquidityLong: FixedNumber.fromString(formatUnits(availLiqLong, 30), 30),
+        availableLiquidityShort: FixedNumber.fromString(formatUnits(availLiqShort, 30), 30),
+        longFundingRate: FixedNumber.fromString(formatUnits(fundingRateLong, 30), 30),
+        shortFundingRate: FixedNumber.fromString(formatUnits(fundingRateShort, 30), 30),
+        longBorrowRate: FixedNumber.fromString(formatUnits(borrowingRateLong, 30), 30),
+        shortBorrowRate: FixedNumber.fromString(formatUnits(borrowingRateShort, 30), 30)
       })
     }
 
@@ -487,7 +489,7 @@ export class GmxV2Service implements IAdapterV1 {
     }
   }
 
-  _mapOrderType(orderType: OrderType, orderDirection: OrderDirection) {
+  _mapOrderType(orderType: OrderType, orderDirection: 'LONG' | 'SHORT') {
     return mapping[orderDirection][orderType]
   }
 
@@ -499,9 +501,9 @@ export class GmxV2Service implements IAdapterV1 {
     const referralCodeTxPromise = this.checkAndSetReferralCodeTx(wallet, opts)
 
     // checks for min collateral, min leverage should be done in preview or f/e
-    const marketsInfoPromise = useMarketsInfo(ARBITRUM, ethers.constants.AddressZero)
+    const tokensDataPromise = useTokensData(ARBITRUM, wallet, opts)
 
-    const [referralCodeTx, { tokensData }] = await Promise.all([referralCodeTxPromise, marketsInfoPromise])
+    const [referralCodeTx, { tokensData }] = await Promise.all([referralCodeTxPromise, tokensDataPromise])
     txs.push(...referralCodeTx)
 
     for (const od of orderData) {
@@ -757,7 +759,7 @@ export class GmxV2Service implements IAdapterV1 {
 
     if (positionInfo.length !== closePositionData.length) throw new Error('position close data mismatch')
 
-    const { tokensData } = await useMarketsInfo(ARBITRUM, ethers.constants.AddressZero)
+    const { tokensData } = await useTokensData(ARBITRUM, ethers.constants.AddressZero)
 
     for (let i = 0; i < positionInfo.length; i++) {
       // if market:
@@ -905,7 +907,7 @@ export class GmxV2Service implements IAdapterV1 {
 
     if (positionInfo.length !== updatePositionMarginData.length) throw new Error('position close data mismatch')
 
-    const { tokensData } = await useMarketsInfo(ARBITRUM, ethers.constants.AddressZero)
+    const { tokensData } = await useTokensData(ARBITRUM, ethers.constants.AddressZero)
 
     for (let i = 0; i < positionInfo.length; i++) {
       // check collateral is supported
@@ -1218,9 +1220,10 @@ export class GmxV2Service implements IAdapterV1 {
     const trades: HistoricalTradeInfo[] = []
 
     const cachedMarkets = await this._cachedMarkets(opts)
-    rawTrades.forEach(async (trade: any) => {
+    for (const trade of rawTrades) {
       const marketId = encodeMarketId(arbitrum.id.toString(), 'GMXV2', ethers.utils.getAddress(trade.marketAddress))
       const marketInfo = cachedMarkets[marketId]
+      if (!marketInfo) continue
       const indexToken = getGmxV2TokenByAddress(marketInfo.market.indexToken)
       const initialCollateralToken = getGmxV2TokenByAddress(trade.feeInfoCollateralTokenAddress)
       // if (trade.pnlUsd === null) trade.pnlUsd = '0'
@@ -1245,7 +1248,7 @@ export class GmxV2Service implements IAdapterV1 {
         txHash: trade.executedTxn.hash,
         id: trade.executedTxn.hash
       } as HistoricalTradeInfo)
-    })
+    }
 
     return {
       result: trades,
@@ -1947,6 +1950,51 @@ export class GmxV2Service implements IAdapterV1 {
     opts?: ApiOpts | undefined
   ): Promise<OrderBook[]> {
     throw new Error('Method not implemented.')
+  }
+
+  async getBars(params: GetBarsParams): Promise<TVBar[]> {
+    return getPythBars(params)
+  }
+
+  isOrderForPosition(order: OrderInfo, position: PositionInfo): boolean {
+    return (
+      order.marketId === position.marketId &&
+      order.direction === position.direction &&
+      order.collateral.symbol === position.collateral.symbol
+    )
+  }
+
+  getDepositWithdrawTime(_: 'Deposit' | 'Withdraw'): { deposit: string; withdraw: string } {
+    return {
+      deposit: '5 Mins',
+      withdraw: '10 Mins'
+    }
+  }
+
+  getMatchingPosition(
+    positions: PositionInfo[],
+    market: MarketInfo,
+    collateralToken: Token,
+    order: 'long' | 'short'
+  ): PositionInfo | undefined {
+    let symbolToMatch = collateralToken.symbol
+    if (collateralToken.symbol === 'ETH') {
+      symbolToMatch = 'WETH'
+    }
+
+    return positions.find(
+      (p) =>
+        p.marketId === market.marketId && p.collateral.symbol == symbolToMatch && p.direction.toLowerCase() === order
+    )
+  }
+
+  async getWithdrawableBalance(
+    _wallet: string,
+    _collateralToken: Token,
+    _market: MarketInfo,
+    _opts?: ApiOpts
+  ): Promise<FixedNumber> {
+    return ZERO_FN
   }
 
   ///////////////////////////////////

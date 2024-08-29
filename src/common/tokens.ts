@@ -177,6 +177,26 @@ export const tokens = {
       [blast.id]: undefined
     }
   },
+  PEPE: {
+    name: 'Pepe',
+    symbol: 'PEPE',
+    decimals: 18,
+    address: {
+      [arbitrum.id]: '0x25d887Ce7a35172C62FeBFD67a1856F20FaEbB00',
+      [optimism.id]: undefined,
+      [blast.id]: undefined
+    }
+  },
+  WIF: {
+    name: 'dogwifhat',
+    symbol: 'WIF',
+    decimals: 6,
+    address: {
+      [arbitrum.id]: '0xA1b91fe9FD52141Ff8cac388Ce3F10BFDc1dE79d',
+      [optimism.id]: undefined,
+      [blast.id]: undefined
+    }
+  },
   USDB: {
     symbol: 'USDB',
     name: 'USDB',
@@ -185,26 +205,6 @@ export const tokens = {
       [arbitrum.id]: undefined,
       [optimism.id]: undefined,
       [blast.id]: '0x4300000000000000000000000000000000000003'
-    }
-  },
-  fwWETH: {
-    symbol: 'fwWETH',
-    name: 'Few Wrapped Wrapped Ether',
-    decimals: 18,
-    address: {
-      [arbitrum.id]: undefined,
-      [optimism.id]: undefined,
-      [blast.id]: '0x66714db8f3397c767d0a602458b5b4e3c0fe7dd1'
-    }
-  },
-  PAC: {
-    symbol: 'PAC',
-    name: 'PacMoon',
-    decimals: 18,
-    address: {
-      [arbitrum.id]: undefined,
-      [optimism.id]: undefined,
-      [blast.id]: '0x5ffd9ebd27f2fcab044c0f0a26a45cb62fa29c06'
     }
   },
   ezETH: {
